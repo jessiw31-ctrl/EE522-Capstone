@@ -6,9 +6,9 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <optional>
 
-// Change this namespace if your code uses sdim instead of exstabsim.
-namespace sim = exstabsim;
+namespace sim = sdim;
 
 bool close_enough(double observed, double expected, double tol) {
     return std::abs(observed - expected) < tol;
@@ -19,17 +19,22 @@ void test_depolarizing_1qubit() {
     const double p = 0.3;
     const double tol = 0.02;
 
-    sim::Circuit circuit(1, 2);  // 1 qubit, dimension d = 2
+    sim::Circuit circuit(1, 2);
 
-    circuit.add_gate("N1", 0, {
-        {"channel", std::string("d")},
-        {"prob", p}
-    });
+    circuit.add_gate(
+        "N1",
+        0,
+        std::nullopt,
+        sim::ParameterMap{
+            {"channel", std::string("d")},
+            {"prob", p}
+        }
+    );
 
     circuit.add_gate("M", 0);
 
     sim::Program program(circuit, 12345);
-    auto results = program.simulate_shots(shots);
+    auto results = program.simulate_shots(shots, false);
 
     int count_0 = 0;
     int count_1 = 0;
@@ -51,8 +56,6 @@ void test_depolarizing_1qubit() {
 
     assert(close_enough(f0, expected_0, tol));
     assert(close_enough(f1, expected_1, tol));
-
-    std::cout << "Depolarizing noise test passed!\n";
 }
 
 void test_pauli_channel_1qubit() {
@@ -64,16 +67,21 @@ void test_pauli_channel_1qubit() {
 
     sim::Circuit circuit(1, 2);
 
-    circuit.add_gate("PAULI1", 0, {
-        {"prob_x", prob_x},
-        {"prob_z", prob_z},
-        {"prob_xz", prob_xz}
-    });
+    circuit.add_gate(
+        "PAULI1",
+        0,
+        std::nullopt,
+        sim::ParameterMap{
+            {"prob_x", prob_x},
+            {"prob_z", prob_z},
+            {"prob_xz", prob_xz}
+        }
+    );
 
     circuit.add_gate("M", 0);
 
     sim::Program program(circuit, 54321);
-    auto results = program.simulate_shots(shots);
+    auto results = program.simulate_shots(shots, false);
 
     int count_0 = 0;
     int count_1 = 0;
@@ -86,7 +94,6 @@ void test_pauli_channel_1qubit() {
     double f0 = static_cast<double>(count_0) / shots;
     double f1 = static_cast<double>(count_1) / shots;
 
-    // In Z-basis measurement of |0>, only X and XZ flip the result.
     double expected_1 = prob_x + prob_xz;
     double expected_0 = 1.0 - expected_1;
 
@@ -96,8 +103,6 @@ void test_pauli_channel_1qubit() {
 
     assert(close_enough(f0, expected_0, tol));
     assert(close_enough(f1, expected_1, tol));
-
-    std::cout << "Pauli-channel noise test passed!\n";
 }
 
 int main() {
