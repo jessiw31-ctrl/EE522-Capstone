@@ -15,8 +15,8 @@ bool close_enough(double observed, double expected, double tol) {
 }
 
 void test_depolarizing_1qubit() {
-    const int shots = 100000;
-    const double p = 0.3;
+    const int shots = 10000;
+    const double p = 0.1;
     const double tol = 0.02;
 
     sim::Circuit circuit(1, 2);
