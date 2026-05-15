@@ -1,5 +1,5 @@
 
-#include "../ExStabSim/program.h"
+#include "program.h"
 #include <chrono>
 #include <cmath>
 #include <cstdint>
