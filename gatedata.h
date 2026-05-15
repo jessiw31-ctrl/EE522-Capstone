@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 
-namespace exstabsim {
+namespace sdim {
     using ParameterValue = std::variant<std::monostate, std::int64_t, double, std::string, std::vector<double> >;
     using ParameterMap = std::map<std::string, ParameterValue>;
 
