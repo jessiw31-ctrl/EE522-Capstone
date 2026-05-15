@@ -4,7 +4,7 @@
 #include <sstream>
 #include "gatedata.h"
 
-namespace exstabsim {
+namespace sdim {
     namespace {
         ParameterMap make_n1_defaults() {
             return ParameterMap{{"channel", std::string("d")}, {"prob", 0.01}};
