@@ -14,12 +14,12 @@
 #include <vector>
 
 namespace {
-    using exstabsim::BuildIrResult;
-    using exstabsim::Circuit;
-    using exstabsim::FrameResults3D;
-    using exstabsim::MeasurementArray2D;
-    using exstabsim::MeasurementRecord;
-    using exstabsim::Program;
+    using sdim::BuildIrResult;
+    using sdim::Circuit;
+    using sdim::FrameResults3D;
+    using sdim::MeasurementArray2D;
+    using sdim::MeasurementRecord;
+    using sdim::Program;
 
     constexpr int kDimension = 3;
     using Clock = std::chrono::steady_clock;
@@ -145,7 +145,7 @@ namespace {
             }
         }
 
-        const exstabsim::ParameterMap noise_params{
+        const sdim::ParameterMap noise_params{
                 {"prob_x", p_x},
                 {"prob_z", 0.0},
                 {"prob_xz", 0.0},
