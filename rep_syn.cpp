@@ -13,12 +13,12 @@
 #include <vector>
 
 namespace {
-    using sdim::BuildIrResult;
-    using sdim::Circuit;
-    using sdim::FrameResults3D;
-    using sdim::MeasurementArray2D;
-    using sdim::MeasurementRecord;
-    using sdim::Program;
+    using exstabsim::BuildIrResult;
+    using exstabsim::Circuit;
+    using exstabsim::FrameResults3D;
+    using exstabsim::MeasurementArray2D;
+    using exstabsim::MeasurementRecord;
+    using exstabsim::Program;
 
     constexpr int kDimension = 3;
     using Clock = std::chrono::steady_clock;
