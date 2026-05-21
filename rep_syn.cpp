@@ -151,7 +151,7 @@ namespace {
             }
         }
 
-        const sdim::ParameterMap noise_params{
+        const exstabsim::ParameterMap noise_params{
                 {"prob_x", p_x},
                 {"prob_z", 0.0},
                 {"prob_xz", 0.0},
