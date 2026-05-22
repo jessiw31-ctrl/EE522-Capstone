@@ -20,9 +20,9 @@ int mod_q(int x) {
 struct Defect {
     int id;
     int shot;
-    int x;       // edge index
-    int t;       // round index
-    int charge;  // 1 or 2
+    int x;
+    int t;
+    int charge;
     bool final_boundary;
 };
 
@@ -43,8 +43,8 @@ struct CorrectionChain {
 };
 
 struct HDRGResult {
-    bool success;
-    int final_radius;
+    bool success = false;
+    int final_radius = 0;
     std::vector<Cluster> clusters;
     std::vector<CorrectionChain> chains;
 };
@@ -53,14 +53,17 @@ std::vector<std::string> split_csv_line(const std::string &line) {
     std::vector<std::string> out;
     std::stringstream ss(line);
     std::string item;
+
     while (std::getline(ss, item, ',')) {
         out.push_back(item);
     }
+
     return out;
 }
 
 std::map<int, std::vector<Defect>> read_syndrome_csv(const std::string &filename) {
     std::ifstream in(filename);
+
     if (!in) {
         throw std::runtime_error("Could not open " + filename);
     }
@@ -77,6 +80,10 @@ std::map<int, std::vector<Defect>> read_syndrome_csv(const std::string &filename
         if (line.empty()) continue;
 
         auto cols = split_csv_line(line);
+
+        if (cols.size() < 10) {
+            continue;
+        }
 
         int shot = std::stoi(cols[3]);
         int round = std::stoi(cols[4]);
@@ -128,12 +135,14 @@ std::vector<std::vector<int>> connected_components(
 
         std::vector<int> comp;
         std::queue<int> q;
+
         q.push(i);
         visited[i] = true;
 
         while (!q.empty()) {
             int u = q.front();
             q.pop();
+
             comp.push_back(u);
 
             for (int v : adj[u]) {
@@ -168,7 +177,7 @@ Cluster make_cluster(
     c.id = cluster_id;
     c.defect_indices = component;
     c.total_charge_mod3 = charge;
-    c.neutral = (charge == 0);
+    c.neutral = charge == 0;
     c.radius = radius;
 
     return c;
@@ -270,9 +279,11 @@ HDRGResult hdrg_decode_one_shot(
 
         for (int i = 0; i < static_cast<int>(comps.size()); ++i) {
             Cluster c = make_cluster(i, comps[i], defects, radius);
+
             if (!c.neutral) {
                 all_neutral = false;
             }
+
             clusters.push_back(c);
         }
 
@@ -285,17 +296,19 @@ HDRGResult hdrg_decode_one_shot(
         }
     }
 
-    auto comps = connected_components(defects, max_radius);
-    std::vector<Cluster> clusters;
+    int max_radius_used = max_radius;
+    auto comps = connected_components(defects, max_radius_used);
 
+    std::vector<Cluster> clusters;
     for (int i = 0; i < static_cast<int>(comps.size()); ++i) {
-        clusters.push_back(make_cluster(i, comps[i], defects, max_radius));
+        clusters.push_back(make_cluster(i, comps[i], defects, max_radius_used));
     }
 
     result.success = false;
-    result.final_radius = max_radius;
+    result.final_radius = max_radius_used;
     result.clusters = clusters;
     result.chains = make_correction_chains(clusters, defects);
+
     return result;
 }
 
@@ -305,6 +318,7 @@ void write_graph_dot(
         int radius) {
 
     std::ofstream out(filename);
+
     if (!out) {
         throw std::runtime_error("Could not write " + filename);
     }
@@ -317,19 +331,17 @@ void write_graph_dot(
     for (int i = 0; i < static_cast<int>(defects.size()); ++i) {
         const Defect &d = defects[i];
 
-        std::string color = "red";
-        std::string label = std::to_string(d.charge);
-
         out << "  " << i
-            << " [label=\"" << label << "\", "
+            << " [label=\"" << d.charge << "\", "
             << "pos=\"" << d.x << "," << -d.t << "!\", "
-            << "style=filled, fillcolor=" << color << ", "
+            << "style=filled, fillcolor=red, "
             << "shape=circle];\n";
     }
 
     for (int i = 0; i < static_cast<int>(defects.size()); ++i) {
         for (int j = i + 1; j < static_cast<int>(defects.size()); ++j) {
             int dist = spacetime_distance(defects[i], defects[j]);
+
             if (dist <= radius) {
                 out << "  " << i << " -- " << j
                     << " [label=\"" << dist << "\"];\n";
@@ -387,11 +399,13 @@ int main(int argc, char **argv) {
     std::string syndrome_file = "syndrome.csv";
     int distance = 3;
     int rounds = 5;
+    int total_shots = 1000;
     int graphs_to_save = 3;
 
     if (argc >= 2) syndrome_file = argv[1];
     if (argc >= 3) distance = std::stoi(argv[2]);
     if (argc >= 4) rounds = std::stoi(argv[3]);
+    if (argc >= 5) total_shots = std::stoi(argv[4]);
 
     auto shots = read_syndrome_csv(syndrome_file);
 
@@ -408,15 +422,22 @@ int main(int argc, char **argv) {
     chains_out
         << "shot,cluster_id,defect_a,defect_b,charge,path_step,x,t\n";
 
-    int total = 0;
     int failures = 0;
     int graph_count = 0;
 
-    for (const auto &[shot, defects] : shots) {
+    for (int shot = 0; shot < total_shots; ++shot) {
+        std::vector<Defect> defects;
+
+        auto it = shots.find(shot);
+        if (it != shots.end()) {
+            defects = it->second;
+        }
+
         HDRGResult result = hdrg_decode_one_shot(defects, distance, rounds);
 
-        total += 1;
-        if (!result.success) failures += 1;
+        if (!result.success) {
+            failures += 1;
+        }
 
         summary << shot << ','
                 << defects.size() << ','
@@ -428,7 +449,7 @@ int main(int argc, char **argv) {
         write_clusters_csv(clusters_out, shot, result, defects);
         write_correction_chains_csv(chains_out, shot, result);
 
-        if (graph_count < graphs_to_save) {
+        if (graph_count < graphs_to_save && !defects.empty()) {
             std::string graph_name =
                     "graph_shot_" + std::to_string(shot) + ".dot";
 
@@ -438,10 +459,13 @@ int main(int argc, char **argv) {
     }
 
     double failure_rate =
-            total > 0 ? static_cast<double>(failures) / total : 0.0;
+            total_shots > 0
+            ? static_cast<double>(failures) / static_cast<double>(total_shots)
+            : 0.0;
 
     std::cout << "HDRG decode complete\n";
-    std::cout << "decoded shots = " << total << "\n";
+    std::cout << "decoded shots = " << total_shots << "\n";
+    std::cout << "shots with defects = " << shots.size() << "\n";
     std::cout << "failures = " << failures << "\n";
     std::cout << "failure rate = " << failure_rate << "\n";
     std::cout << "wrote hdrg_summary.csv\n";
